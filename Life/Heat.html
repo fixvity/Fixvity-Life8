@@ -161,6 +161,20 @@ function calculateHeatIndex(){
   if(unit==="F"){ T_F=tempVal; T_C=(T_F-32)*5/9; T_K=T_C+273.15; }
   if(unit==="K"){ T_K=tempVal; T_C=T_K-273.15; T_F=T_C*9/5+32; }
 
+  /* ---- Kelvin safety rule (FIX) ---- */
+  if(unit==="K" && T_F < 80){
+    out.innerHTML = `
+      <div class="warning">
+        Heat Index is not defined for Kelvin-scale temperatures below 80°F (26.7°C).
+        Under these conditions, heat index equals air temperature.
+      </div>
+
+      <span class="badge">Feels Like: ${T_K.toFixed(1)} K</span>
+      <span class="badge">No heat stress</span>
+    `;
+    return;
+  }
+
   let HI_F = T_F;
 
   /* ---- NOAA validity ---- */
@@ -176,7 +190,6 @@ function calculateHeatIndex(){
       0.00085282*T_F*RH*RH -
       0.00000199*T_F*T_F*RH*RH;
 
-    /* ---- NOAA adjustments ---- */
     if(RH < 13 && T_F >= 80 && T_F <= 112){
       HI_F -= ((13-RH)/4)*Math.sqrt((17-Math.abs(T_F-95))/17);
     }
