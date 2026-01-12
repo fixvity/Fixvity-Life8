@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Heat Index Calculator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+:root{
+  --primary:#ef4444;
+  --bg:#f4f6fb;
+  --card:#ffffff;
+  --radius:14px;
+  --text:#1f2937;
+  --muted:#6b7280;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,system-ui,Arial;
+  background:var(--bg);
+  color:var(--text);
+}
+.container{max-width:960px;margin:auto;padding:16px}
+.card{
+  background:var(--card);
+  border-radius:var(--radius);
+  box-shadow:0 12px 28px rgba(0,0,0,.08);
+  margin-bottom:22px;
+  padding:20px;
+}
+h1,h3{margin:0;color:var(--primary)}
+small{color:var(--muted)}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:14px;
+}
+label{font-size:14px;margin-bottom:6px;display:block}
+
+input,select{
+  width:100%;
+  height:48px;
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid #d1d5db;
+  font-size:15px;
+}
+
+button{
+  width:100%;
+  height:52px;
+  background:var(--primary);
+  color:#fff;
+  border:none;
+  border-radius:12px;
+  font-size:16px;
+  cursor:pointer;
+  margin-top:14px;
+}
+
+.result{
+  margin-top:16px;
+  background:#f9fafb;
+  border-radius:12px;
+  padding:16px;
+}
+
+.badge{
+  display:inline-block;
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:13px;
+  margin:6px 6px 0 0;
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+.table-box{margin-top:14px;overflow-x:auto}
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:14px;
+}
+th,td{
+  padding:12px;
+  text-align:center;
+  border-bottom:1px solid #e5e7eb;
+}
+th{background:#fee2e2;color:#7f1d1d}
+
+.warning{
+  color:#b91c1c;
+  font-weight:600;
+  margin-bottom:10px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="card">
+<h1>🔥 Heat Index Calculator</h1>
+<small>NOAA / NWS official standard · Scientifically accurate</small>
+</div>
+
+<div class="card">
+<h3>Weather Conditions</h3>
+
+<div class="grid">
+<div>
+<label>Air Temperature</label>
+<input type="number" id="tempInput" placeholder="e.g. 32">
+</div>
+
+<div>
+<label>Temperature Unit</label>
+<select id="tempUnit">
+<option value="C">Celsius (°C)</option>
+<option value="F">Fahrenheit (°F)</option>
+<option value="K">Kelvin (K)</option>
+</select>
+</div>
+
+<div>
+<label>Relative Humidity (%)</label>
+<input type="number" id="humidityInput" placeholder="e.g. 70" min="0" max="100">
+</div>
+</div>
+
+<button onclick="calculateHeatIndex()">Calculate Heat Index</button>
+
+<div id="output" class="result">Enter values to calculate heat index.</div>
+</div>
+
+</div>
+
+<script>
+function calculateHeatIndex(){
+  const out = document.getElementById("output");
+
+  const tempVal = parseFloat(tempInput.value);
+  const RH = parseFloat(humidityInput.value);
+  const unit = tempUnit.value;
+
+  if(isNaN(tempVal) || isNaN(RH)){
+    out.innerHTML="Please enter temperature and humidity.";
+    return;
+  }
+
+  if(RH < 0 || RH > 100){
+    out.innerHTML="<div class='warning'>Humidity must be between 0% and 100%.</div>";
+    return;
+  }
+
+  /* ---- Temperature conversion ---- */
+  let T_C, T_F, T_K;
+  if(unit==="C"){ T_C=tempVal; T_F=T_C*9/5+32; T_K=T_C+273.15; }
+  if(unit==="F"){ T_F=tempVal; T_C=(T_F-32)*5/9; T_K=T_C+273.15; }
+  if(unit==="K"){ T_K=tempVal; T_C=T_K-273.15; T_F=T_C*9/5+32; }
+
+  let HI_F = T_F;
+
+  /* ---- NOAA validity ---- */
+  if(T_F >= 80){
+    HI_F =
+      -42.379 +
+      2.04901523*T_F +
+      10.14333127*RH -
+      0.22475541*T_F*RH -
+      0.00683783*T_F*T_F -
+      0.05481717*RH*RH +
+      0.00122874*T_F*T_F*RH +
+      0.00085282*T_F*RH*RH -
+      0.00000199*T_F*T_F*RH*RH;
+
+    /* ---- NOAA adjustments ---- */
+    if(RH < 13 && T_F >= 80 && T_F <= 112){
+      HI_F -= ((13-RH)/4)*Math.sqrt((17-Math.abs(T_F-95))/17);
+    }
+    if(RH > 85 && T_F >= 80 && T_F <= 87){
+      HI_F += ((RH-85)/10)*((87-T_F)/5);
+    }
+  }
+
+  const HI_C = (HI_F-32)*5/9;
+  const HI_K = HI_C+273.15;
+
+  const risk =
+    HI_F >= 130 ? "Extreme danger (heat stroke imminent)" :
+    HI_F >= 105 ? "Danger (heat cramps & exhaustion likely)" :
+    HI_F >= 90 ? "Extreme caution (heat exhaustion possible)" :
+    HI_F >= 80 ? "Caution (fatigue possible)" :
+    "No heat stress";
+
+  const display =
+    unit==="F" ? `${HI_F.toFixed(1)} °F` :
+    unit==="K" ? `${HI_K.toFixed(1)} K` :
+    `${HI_C.toFixed(1)} °C`;
+
+  out.innerHTML = `
+    <span class="badge">Feels Like: ${display}</span>
+    <span class="badge">${risk}</span>
+
+    <div class="table-box">
+    <table>
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Temperature</td><td>${T_C.toFixed(1)} °C / ${T_F.toFixed(1)} °F / ${T_K.toFixed(1)} K</td></tr>
+      <tr><td>Humidity</td><td>${RH.toFixed(1)} %</td></tr>
+      <tr><td>Heat Index</td><td>${HI_C.toFixed(1)} °C / ${HI_F.toFixed(1)} °F</td></tr>
+      <tr><td>Health Impact</td><td>${risk}</td></tr>
+    </table>
+    </div>
+  `;
+}
+</script>
+
+</body>
+</html>
